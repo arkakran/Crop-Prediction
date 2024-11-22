@@ -21,22 +21,28 @@
 #     flask_app.run(debug=True)
 
 import streamlit as st
-import pickle
 import numpy as np
+import pickle
 
-# Load your model
-model = pickle.load(open('model.pkl', 'rb'))
+# Load the trained model
+model = pickle.load(open("model.pkl", "rb"))
 
-# Streamlit interface
+# Streamlit App
 st.title("Crop Prediction App")
 
-# Form for user input
-with st.form("prediction_form"):
-    feature1 = st.number_input("Enter Feature 1")
-    feature2 = st.number_input("Enter Feature 2")
-    submitted = st.form_submit_button("Predict")
+# Input fields
+st.header("Enter the Features:")
+feature1 = st.number_input("Enter Feature 1 (e.g., Temperature):", value=0.0)
+feature2 = st.number_input("Enter Feature 2 (e.g., Humidity):", value=0.0)
 
-    if submitted:
-        # Assuming model expects a 2D array
-        prediction = model.predict(np.array([[feature1, feature2]]))
-        st.write(f"Prediction: {prediction[0]}")
+# Button for prediction
+if st.button("Predict"):
+    # Prepare input for the model
+    features = np.array([[feature1, feature2]])
+    
+    # Get prediction
+    prediction = model.predict(features)
+    
+    # Display prediction
+    st.success(f"The Predicted Crop is: {prediction[0]}")
+
