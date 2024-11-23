@@ -88,15 +88,35 @@
 
 
 
-
-
-
 import streamlit as st
 import numpy as np
 import pickle
 import requests
 
-background_image_url = "https://images.pexels.com/photos/91115/pexels-photo-91115.jpeg"
+# Function to get weather data by location (country, state, city, area)
+def get_weather_data(country, state, city, area):
+    # Construct location string in the format expected by OpenWeatherMap
+    location = f"{area},{city},{state},{country}"
+    weather_api_url = f"http://api.openweathermap.org/data/2.5/weather?q={location}&appid=YOUR_API_KEY&units=metric"
+    response = requests.get(weather_api_url)
+
+    if response.status_code == 200:
+        weather_data = response.json()
+        return {
+            "temperature": weather_data["main"]["temp"],
+            "humidity": weather_data["main"]["humidity"],
+            "rainfall": weather_data["rain"].get('1h', 0) if "rain" in weather_data else 0
+        }
+    else:
+        if response.status_code == 404:
+            return "Location not found. Please check the country, state, city, and area."
+        elif response.status_code == 401:
+            return "Invalid API key. Please check your API key."
+        else:
+            return "Error fetching weather data. Please try again later."
+
+# Set background image for the app
+background_image_url = "https://images.pexels.com/photos/91115/pexels-photo-91115.jpeg"  
 page_bg = f"""
 <style>
 .stApp {{
@@ -109,48 +129,24 @@ page_bg = f"""
 """
 st.markdown(page_bg, unsafe_allow_html=True)
 
-# Function to get weather data by location
-def get_weather_data(location):
-    weather_api_url = f"http://api.openweathermap.org/data/2.5/weather?q={location}&appid=YOUR_API_KEY&units=metric"
-    response = requests.get(weather_api_url)
-    if response.status_code == 200:
-        weather_data = response.json()
-        return {
-            "temperature": weather_data["main"]["temp"],
-            "humidity": weather_data["main"]["humidity"]
-        }
-    else:
-        return None
+# Load the trained model
+model = pickle.load(open("model.pkl", "rb"))
 
 st.title("Crop Prediction Model")
 st.subheader("Enter the required features to predict the best crop:")
 
-# Input for location
-location = st.text_input("Enter Location (City Name):")
+# Location input (structured as Country → State → City → Area/Village)
+country = st.text_input("Enter Country:")
+state = st.text_input("Enter State:")
+city = st.text_input("Enter City:")
+area = st.text_input("Enter Area/Village:")
 
-# Input fields
+# Input fields for other crop prediction features
 nitrogen = st.text_input("Nitrogen Content (N):", placeholder="Enter a value between 0-300")
 phosphorus = st.text_input("Phosphorus Content (P):", placeholder="Enter a value between 0-150")
 potassium = st.text_input("Potassium Content (K):", placeholder="Enter a value between 0-800")
-
-# Initialize temperature and humidity
-temperature = ""
-humidity = ""
-
-if location:
-    weather = get_weather_data(location)
-    if weather:
-        temperature = weather["temperature"]
-        humidity = weather["humidity"]
-        st.success(f"Fetched Weather Data for {location}: Temperature = {temperature}°C, Humidity = {humidity}%")
-    else:
-        st.error("Could not fetch weather data. Please check the location and try again.")
-
-# Now we will load the model after inputs
-model = pickle.load(open("model.pkl", "rb"))
-
-temperature = st.text_input("Temperature (°C):", value=temperature, placeholder="Enter a value between -5 to 50")
-humidity = st.text_input("Humidity (%):", value=humidity, placeholder="Enter a value between 20-100")
+temperature = st.text_input("Temperature (°C):", placeholder="Enter a value between -5 to 50")
+humidity = st.text_input("Humidity (%):", placeholder="Enter a value between 20-100")
 ph = st.text_input("Soil pH Level:", placeholder="Enter a value between 4.0-9.0")
 rainfall = st.text_input("Rainfall (mm):", placeholder="Enter a value between 0-3000")
 
@@ -168,7 +164,21 @@ except ValueError:
 
 # Button for prediction
 if st.button("Predict"):
-    # Check if inputs are within range
+    # Fetch weather data based on location (country → state → city → area)
+    if country and state and city and area:
+        weather = get_weather_data(country, state, city, area)
+        if isinstance(weather, dict):
+            temperature = weather["temperature"]
+            humidity = weather["humidity"]
+            rainfall = weather["rainfall"]
+            st.success(f"Fetched Weather Data for {area}, {city}, {state}, {country}:")
+            st.write(f"Temperature = {temperature}°C, Humidity = {humidity}%, Rainfall = {rainfall} mm")
+        else:
+            st.error(weather)  # Display error message from the API response
+    else:
+        st.error("Please enter all location details (Country, State, City, and Area).")
+
+    # Check if inputs are within range for prediction
     if not (0 <= nitrogen <= 300):
         st.error("Nitrogen value should be between 0 and 300.")
     elif not (0 <= phosphorus <= 150):
@@ -186,10 +196,10 @@ if st.button("Predict"):
     else:
         # Prepare input features
         features = np.array([[nitrogen, phosphorus, potassium, temperature, humidity, ph, rainfall]])
-
+        
         # Get prediction
         prediction = model.predict(features)
-
+        
         # Display prediction
         st.success(f"The predicted crop is: {prediction[0]}")
 
