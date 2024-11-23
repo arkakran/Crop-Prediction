@@ -110,7 +110,7 @@ st.markdown(
     """
     <style>
     body {
-        background-image: url('https://github.com/arkakran/Crop-Prediction/blob/main/static/farm.jpg');
+        background-image: url('static/farm.jpg');  /* Local file reference */
         background-size: cover;
         background-repeat: no-repeat;
         background-attachment: fixed;
@@ -123,6 +123,8 @@ st.markdown(
     </style>
     """,
     unsafe_allow_html=True
+)
+
 )
 
 st.title("Crop Prediction Model")
