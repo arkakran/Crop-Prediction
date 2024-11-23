@@ -308,7 +308,7 @@ import numpy as np
 import pickle
 
 # Add background image
-background_image_url = "https://images.pexels.com/photos/1595104/pexels-photo-1595104.jpeg"  
+background_image_url = "https://github.com/arkakran/Crop-Prediction/blob/main/static/farm.jpg"  
 page_bg = f"""
 <style>
 .stApp {{
