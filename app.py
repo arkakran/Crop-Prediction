@@ -88,6 +88,9 @@
 
 
 
+
+
+
 import streamlit as st
 import numpy as np
 import pickle
@@ -106,12 +109,6 @@ page_bg = f"""
 """
 st.markdown(page_bg, unsafe_allow_html=True)
 
-# Load the trained model
-model = pickle.load(open("model.pkl", "rb"))
-
-st.title("Crop Prediction Model")
-st.subheader("Enter the required features to predict the best crop:")
-
 # Function to get weather data by location
 def get_weather_data(location):
     weather_api_url = f"http://api.openweathermap.org/data/2.5/weather?q={location}&appid=YOUR_API_KEY&units=metric"
@@ -125,6 +122,9 @@ def get_weather_data(location):
     else:
         return None
 
+st.title("Crop Prediction Model")
+st.subheader("Enter the required features to predict the best crop:")
+
 # Input for location
 location = st.text_input("Enter Location (City Name):")
 
@@ -133,9 +133,10 @@ nitrogen = st.text_input("Nitrogen Content (N):", placeholder="Enter a value bet
 phosphorus = st.text_input("Phosphorus Content (P):", placeholder="Enter a value between 0-150")
 potassium = st.text_input("Potassium Content (K):", placeholder="Enter a value between 0-800")
 
-# Fetch weather data if location is entered
+# Initialize temperature and humidity
 temperature = ""
 humidity = ""
+
 if location:
     weather = get_weather_data(location)
     if weather:
@@ -144,6 +145,9 @@ if location:
         st.success(f"Fetched Weather Data for {location}: Temperature = {temperature}°C, Humidity = {humidity}%")
     else:
         st.error("Could not fetch weather data. Please check the location and try again.")
+
+# Now we will load the model after inputs
+model = pickle.load(open("model.pkl", "rb"))
 
 temperature = st.text_input("Temperature (°C):", value=temperature, placeholder="Enter a value between -5 to 50")
 humidity = st.text_input("Humidity (%):", value=humidity, placeholder="Enter a value between 20-100")
@@ -182,17 +186,12 @@ if st.button("Predict"):
     else:
         # Prepare input features
         features = np.array([[nitrogen, phosphorus, potassium, temperature, humidity, ph, rainfall]])
-        
+
         # Get prediction
         prediction = model.predict(features)
-        
+
         # Display prediction
         st.success(f"The predicted crop is: {prediction[0]}")
 
 # Note for user
 st.caption("Ensure the inputs are accurate to get the best prediction.")
-
-
-
-
-
