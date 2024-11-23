@@ -109,7 +109,7 @@ st.markdown(
     """
     <style>
     body {
-        background-image: url('https://github.com/arkakran/Crop-Prediction/blob/main/static/farm.jpg');
+        background-image: url('https://www.pexels.com/photo/top-view-of-green-field-1595104/');
         background-size: cover;
         background-repeat: no-repeat;
         background-attachment: fixed;
