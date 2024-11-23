@@ -88,13 +88,6 @@
 
 
 
-
-
-
-
-
-
-
 import streamlit as st
 import numpy as np
 import pickle
@@ -119,53 +112,43 @@ model = pickle.load(open("model.pkl", "rb"))
 st.title("Crop Prediction Model")
 st.subheader("Enter the required features to predict the best crop:")
 
-# Fetch location-based weather data
-def get_location():
-    ip_api_url = "https://ipapi.co/json/"
-    response = requests.get(ip_api_url)
-    location_data = response.json()
-    return location_data.get("latitude"), location_data.get("longitude")
-
-def get_weather_data(lat, lon):
-    weather_api_url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid=YOUR_API_KEY&units=metric"
+# Function to get weather data by location
+def get_weather_data(location):
+    weather_api_url = f"http://api.openweathermap.org/data/2.5/weather?q={location}&appid=YOUR_API_KEY&units=metric"
     response = requests.get(weather_api_url)
-    weather_data = response.json()
-    return weather_data
+    if response.status_code == 200:
+        weather_data = response.json()
+        return {
+            "temperature": weather_data["main"]["temp"],
+            "humidity": weather_data["main"]["humidity"]
+        }
+    else:
+        return None
 
-# Automatically fetch temperature, humidity, and rainfall
-latitude, longitude = get_location()
-weather = None
-
-if latitude and longitude:
-    weather = get_weather_data(latitude, longitude)
+# Input for location
+location = st.text_input("Enter Location (City Name):")
 
 # Input fields
 nitrogen = st.text_input("Nitrogen Content (N):", placeholder="Enter a value between 0-300")
 phosphorus = st.text_input("Phosphorus Content (P):", placeholder="Enter a value between 0-150")
 potassium = st.text_input("Potassium Content (K):", placeholder="Enter a value between 0-800")
 
-if weather:
-    temperature = st.text_input(
-        "Temperature (°C):", 
-        placeholder="Enter a value between -5 to 50",
-        value=weather["main"]["temp"] if "main" in weather else ""
-    )
-    humidity = st.text_input(
-        "Humidity (%):", 
-        placeholder="Enter a value between 20-100",
-        value=weather["main"]["humidity"] if "main" in weather else ""
-    )
-    rainfall = st.text_input(
-        "Rainfall (mm):", 
-        placeholder="Enter a value between 0-3000",
-        value=weather.get("rain", {}).get("1h", 0)
-    )
-else:
-    temperature = st.text_input("Temperature (°C):", placeholder="Enter a value between -5 to 50")
-    humidity = st.text_input("Humidity (%):", placeholder="Enter a value between 20-100")
-    rainfall = st.text_input("Rainfall (mm):", placeholder="Enter a value between 0-3000")
+# Fetch weather data if location is entered
+temperature = ""
+humidity = ""
+if location:
+    weather = get_weather_data(location)
+    if weather:
+        temperature = weather["temperature"]
+        humidity = weather["humidity"]
+        st.success(f"Fetched Weather Data for {location}: Temperature = {temperature}°C, Humidity = {humidity}%")
+    else:
+        st.error("Could not fetch weather data. Please check the location and try again.")
 
+temperature = st.text_input("Temperature (°C):", value=temperature, placeholder="Enter a value between -5 to 50")
+humidity = st.text_input("Humidity (%):", value=humidity, placeholder="Enter a value between 20-100")
 ph = st.text_input("Soil pH Level:", placeholder="Enter a value between 4.0-9.0")
+rainfall = st.text_input("Rainfall (mm):", placeholder="Enter a value between 0-3000")
 
 # Convert inputs to float (with validation)
 try:
@@ -208,9 +191,6 @@ if st.button("Predict"):
 
 # Note for user
 st.caption("Ensure the inputs are accurate to get the best prediction.")
-
-
-
 
 
 
