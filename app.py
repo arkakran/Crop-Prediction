@@ -295,6 +295,6 @@ page_bg_img = """
 st.markdown(page_bg_img, unsafe_allow_html=True)
 
 # Streamlit app content
-st.title("Background Image Test")
+st.title("Background")
 st.write("This is a test to check if the background image loads correctly.")
 
