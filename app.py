@@ -86,43 +86,60 @@
 
 
 
-
 import streamlit as st
 import numpy as np
 import pickle
-import requests
 import googlemaps
+import os
+import requests
 
-# Function to get location coordinates using Google Maps API
+# Set your Google API key (environment variable recommended)
+api_key = os.getenv("GOOGLE_API_KEY")  # Fetch API key securely from the environment
+
+if not api_key:
+    st.error("Google Maps API key not found! Please set your API key.")
+    st.stop()  # Stop execution if the API key is missing
+
+# Function to get coordinates using the Google Maps API
 def get_location_coordinates(api_key, country, state, city, area):
     gmaps = googlemaps.Client(key=api_key)
-    # Constructing address
-    address = f"{area}, {city}, {state}, {country}"
-    geocode_result = gmaps.geocode(address)
-    
-    if geocode_result:
-        # Extracting latitude and longitude
-        location = geocode_result[0]['geometry']['location']
-        return location['lat'], location['lng']
-    else:
+    location = f"{area}, {city}, {state}, {country}"
+    try:
+        geocode_result = gmaps.geocode(location)
+        if geocode_result:
+            lat = geocode_result[0]["geometry"]["location"]["lat"]
+            lon = geocode_result[0]["geometry"]["location"]["lng"]
+            return lat, lon
+        else:
+            st.error("Could not fetch coordinates. Please check the location details.")
+            return None, None
+    except Exception as e:
+        st.error(f"Error fetching coordinates: {str(e)}")
         return None, None
 
-# Function to get weather data from OpenWeatherMap API
-def get_weather_data(lat, lon, api_key):
-    weather_api_url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
-    response = requests.get(weather_api_url)
-
-    if response.status_code == 200:
+# Function to fetch weather data (Temperature, Humidity) based on coordinates
+def get_weather_data(lat, lon):
+    weather_api_key = "YOUR_OPENWEATHER_API_KEY"  # Replace with your OpenWeather API key
+    url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={weather_api_key}&units=metric"
+    
+    try:
+        response = requests.get(url)
         weather_data = response.json()
-        return {
-            "temperature": weather_data["main"]["temp"],
-            "humidity": weather_data["main"]["humidity"],
-            "rainfall": weather_data["rain"].get('1h', 0) if "rain" in weather_data else 0
-        }
-    else:
-        return "Error fetching weather data. Please try again later."
+        if response.status_code == 200:
+            temperature = weather_data['main']['temp']
+            humidity = weather_data['main']['humidity']
+            return temperature, humidity
+        else:
+            st.error("Could not fetch weather data. Please try again later.")
+            return None, None
+    except Exception as e:
+        st.error(f"Error fetching weather data: {str(e)}")
+        return None, None
 
-# Set background image for the app
+# Load the trained model
+model = pickle.load(open("model.pkl", "rb"))
+
+# Streamlit layout and UI components
 background_image_url = "https://images.pexels.com/photos/91115/pexels-photo-91115.jpeg"  
 page_bg = f"""
 <style>
@@ -136,19 +153,16 @@ page_bg = f"""
 """
 st.markdown(page_bg, unsafe_allow_html=True)
 
-# Load the trained model
-model = pickle.load(open("model.pkl", "rb"))
-
 st.title("Crop Prediction Model")
-st.subheader("Enter the required features to predict the best crop:")
+st.subheader("Enter location and other features to predict the best crop:")
 
-# Input fields for location (Country, State, City, Area/Village)
+# Location input fields for country, state, city, and area
 country = st.text_input("Enter Country:")
 state = st.text_input("Enter State:")
 city = st.text_input("Enter City:")
-area = st.text_input("Enter Area/Village:")
+area = st.text_input("Enter Area/Village Name:")
 
-# Input fields for other crop prediction features
+# Inputs for other crop features (N, P, K, pH, etc.)
 nitrogen = st.text_input("Nitrogen Content (N):", placeholder="Enter a value between 0-300")
 phosphorus = st.text_input("Phosphorus Content (P):", placeholder="Enter a value between 0-150")
 potassium = st.text_input("Potassium Content (K):", placeholder="Enter a value between 0-800")
@@ -169,52 +183,52 @@ try:
 except ValueError:
     st.error("Please enter valid numeric values in all fields!")
 
-# Button for prediction
-if st.button("Predict"):
-    if country and state and city and area:
-        # Get location coordinates using Google Maps API
-        lat, lon = get_location_coordinates("YOUR_GOOGLE_MAPS_API_KEY", country, state, city, area)
-        
-        if lat and lon:
-            # Fetch weather data using OpenWeatherMap API
-            weather = get_weather_data(lat, lon, "YOUR_OPENWEATHERMAP_API_KEY")
-            if isinstance(weather, dict):
-                temperature = weather["temperature"]
-                humidity = weather["humidity"]
-                rainfall = weather["rainfall"]
-                st.success(f"Weather Data for {area}, {city}, {state}, {country}:")
-                st.write(f"Temperature = {temperature}°C, Humidity = {humidity}%, Rainfall = {rainfall} mm")
-            else:
-                st.error(weather)  # Display error message from the API response
-        else:
-            st.error("Location not found. Please check the country, state, city, and area.")
-    else:
-        st.error("Please enter all location details (Country, State, City, and Area).")
+# Button to get weather data and predict crop
+if st.button("Fetch Weather and Predict Crop"):
+    # Fetch the coordinates based on location
+    lat, lon = get_location_coordinates(api_key, country, state, city, area)
 
-    # Check if inputs are within range for prediction
-    if not (0 <= nitrogen <= 300):
-        st.error("Nitrogen value should be between 0 and 300.")
-    elif not (0 <= phosphorus <= 150):
-        st.error("Phosphorus value should be between 0 and 150.")
-    elif not (0 <= potassium <= 800):
-        st.error("Potassium value should be between 0 and 800.")
-    elif not (-5 <= temperature <= 50):
-        st.error("Temperature should be between -5 and 50°C.")
-    elif not (20 <= humidity <= 100):
-        st.error("Humidity should be between 20 and 100%.")
-    elif not (4.0 <= ph <= 9.0):
-        st.error("Soil pH Level should be between 4.0 and 9.0.")
-    elif not (0 <= rainfall <= 3000):
-        st.error("Rainfall should be between 0 and 3000 mm.")
+    if lat is not None and lon is not None:
+        # Fetch weather data (Temperature, Humidity)
+        temp, hum = get_weather_data(lat, lon)
+        if temp is not None and hum is not None:
+            # Display fetched weather data
+            st.write(f"Temperature: {temp}°C")
+            st.write(f"Humidity: {hum}%")
+
+            # If weather data is successfully fetched, use it for prediction
+            temperature = temp
+            humidity = hum
+
+            # Check if inputs are within valid ranges
+            if not (0 <= nitrogen <= 300):
+                st.error("Nitrogen value should be between 0 and 300.")
+            elif not (0 <= phosphorus <= 150):
+                st.error("Phosphorus value should be between 0 and 150.")
+            elif not (0 <= potassium <= 800):
+                st.error("Potassium value should be between 0 and 800.")
+            elif not (-5 <= temperature <= 50):
+                st.error("Temperature should be between -5 and 50°C.")
+            elif not (20 <= humidity <= 100):
+                st.error("Humidity should be between 20 and 100%.")
+            elif not (4.0 <= ph <= 9.0):
+                st.error("Soil pH Level should be between 4.0 and 9.0.")
+            elif not (0 <= rainfall <= 3000):
+                st.error("Rainfall should be between 0 and 3000 mm.")
+            else:
+                # Prepare input features for the prediction
+                features = np.array([[nitrogen, phosphorus, potassium, temperature, humidity, ph, rainfall]])
+
+                # Get prediction from the model
+                prediction = model.predict(features)
+
+                # Display prediction
+                st.success(f"The predicted crop is: {prediction[0]}")
+        else:
+            st.error("Could not fetch weather data.")
     else:
-        # Prepare input features
-        features = np.array([[nitrogen, phosphorus, potassium, temperature, humidity, ph, rainfall]])
-        
-        # Get prediction
-        prediction = model.predict(features)
-        
-        # Display prediction
-        st.success(f"The predicted crop is: {prediction[0]}")
+        st.error("Invalid location. Please check the inputs.")
 
 # Note for user
 st.caption("Ensure the inputs are accurate to get the best prediction.")
+
