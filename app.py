@@ -87,17 +87,29 @@
 
 
 
-
 import streamlit as st
 import numpy as np
 import pickle
 import requests
+import googlemaps
 
-# Function to get weather data by location (country, state, city, area)
-def get_weather_data(country, state, city, area):
-    # Construct location string in the format expected by OpenWeatherMap
-    location = f"{area},{city},{state},{country}"
-    weather_api_url = f"http://api.openweathermap.org/data/2.5/weather?q={location}&appid=YOUR_API_KEY&units=metric"
+# Function to get location coordinates using Google Maps API
+def get_location_coordinates(api_key, country, state, city, area):
+    gmaps = googlemaps.Client(key=api_key)
+    # Constructing address
+    address = f"{area}, {city}, {state}, {country}"
+    geocode_result = gmaps.geocode(address)
+    
+    if geocode_result:
+        # Extracting latitude and longitude
+        location = geocode_result[0]['geometry']['location']
+        return location['lat'], location['lng']
+    else:
+        return None, None
+
+# Function to get weather data from OpenWeatherMap API
+def get_weather_data(lat, lon, api_key):
+    weather_api_url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
     response = requests.get(weather_api_url)
 
     if response.status_code == 200:
@@ -108,12 +120,7 @@ def get_weather_data(country, state, city, area):
             "rainfall": weather_data["rain"].get('1h', 0) if "rain" in weather_data else 0
         }
     else:
-        if response.status_code == 404:
-            return "Location not found. Please check the country, state, city, and area."
-        elif response.status_code == 401:
-            return "Invalid API key. Please check your API key."
-        else:
-            return "Error fetching weather data. Please try again later."
+        return "Error fetching weather data. Please try again later."
 
 # Set background image for the app
 background_image_url = "https://images.pexels.com/photos/91115/pexels-photo-91115.jpeg"  
@@ -135,7 +142,7 @@ model = pickle.load(open("model.pkl", "rb"))
 st.title("Crop Prediction Model")
 st.subheader("Enter the required features to predict the best crop:")
 
-# Location input (structured as Country → State → City → Area/Village)
+# Input fields for location (Country, State, City, Area/Village)
 country = st.text_input("Enter Country:")
 state = st.text_input("Enter State:")
 city = st.text_input("Enter City:")
@@ -164,17 +171,23 @@ except ValueError:
 
 # Button for prediction
 if st.button("Predict"):
-    # Fetch weather data based on location (country → state → city → area)
     if country and state and city and area:
-        weather = get_weather_data(country, state, city, area)
-        if isinstance(weather, dict):
-            temperature = weather["temperature"]
-            humidity = weather["humidity"]
-            rainfall = weather["rainfall"]
-            st.success(f"Fetched Weather Data for {area}, {city}, {state}, {country}:")
-            st.write(f"Temperature = {temperature}°C, Humidity = {humidity}%, Rainfall = {rainfall} mm")
+        # Get location coordinates using Google Maps API
+        lat, lon = get_location_coordinates("YOUR_GOOGLE_MAPS_API_KEY", country, state, city, area)
+        
+        if lat and lon:
+            # Fetch weather data using OpenWeatherMap API
+            weather = get_weather_data(lat, lon, "YOUR_OPENWEATHERMAP_API_KEY")
+            if isinstance(weather, dict):
+                temperature = weather["temperature"]
+                humidity = weather["humidity"]
+                rainfall = weather["rainfall"]
+                st.success(f"Weather Data for {area}, {city}, {state}, {country}:")
+                st.write(f"Temperature = {temperature}°C, Humidity = {humidity}%, Rainfall = {rainfall} mm")
+            else:
+                st.error(weather)  # Display error message from the API response
         else:
-            st.error(weather)  # Display error message from the API response
+            st.error("Location not found. Please check the country, state, city, and area.")
     else:
         st.error("Please enter all location details (Country, State, City, and Area).")
 
