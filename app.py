@@ -97,7 +97,6 @@
 # # Note for user
 # st.caption("Ensure the inputs are accurate to get the best prediction.")
 
-
 import streamlit as st
 import numpy as np
 import pickle
@@ -110,7 +109,7 @@ st.markdown(
     """
     <style>
     body {
-        background-image: url('https://github.com/arkakran/Crop-Prediction/blob/main/static/farm.jpg');
+        background-image: url('farm.jpg');
         background-size: cover;
         background-repeat: no-repeat;
         background-attachment: fixed;
@@ -123,8 +122,6 @@ st.markdown(
     </style>
     """,
     unsafe_allow_html=True
-)
-
 )
 
 st.title("Crop Prediction Model")
@@ -180,4 +177,3 @@ if st.button("Predict"):
 
 # Note for user
 st.caption("Ensure the inputs are accurate to get the best prediction.")
-
