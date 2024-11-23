@@ -275,24 +275,26 @@
 
 
 
+
+
 import streamlit as st
 
-# Streamlit App with background image
-st.markdown(
-    """
-    <style>
-    body {
-        background-image: url('https://github.com/arkakran/Crop-Prediction/blob/main/static/farm.jpg');
-        background-size: cover;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+# CSS to set background image
+page_bg_img = """
+<style>
+[data-testid="stAppViewContainer"] {
+    background-image: url("https://github.com/arkakran/Crop-Prediction/blob/main/static/farm.jpg");
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+</style>
+"""
 
-st.title("Test Background Image")
-st.write("This is a test to check if the background image loads.")
+# Apply the background image using markdown
+st.markdown(page_bg_img, unsafe_allow_html=True)
 
+# Streamlit app content
+st.title("Background Image Test")
+st.write("This is a test to check if the background image loads correctly.")
 
