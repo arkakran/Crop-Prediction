@@ -276,25 +276,27 @@
 
 
 
-
 import streamlit as st
 
-# CSS to set background image
-page_bg_img = """
+# Inject CSS for background image
+background_image_url = "https://images.pexels.com/photos/1595104/pexels-photo-1595104.jpeg"  
+
+page_bg = f"""
 <style>
-[data-testid="stAppViewContainer"] {
-    background-image: url("https://github.com/arkakran/Crop-Prediction/blob/main/static/farm.jpg");
+.stApp {{
+    background-image: url("{background_image_url}");
     background-size: cover;
     background-repeat: no-repeat;
     background-attachment: fixed;
-}
+}}
 </style>
 """
 
-# Apply the background image using markdown
-st.markdown(page_bg_img, unsafe_allow_html=True)
+# Render the background CSS
+st.markdown(page_bg, unsafe_allow_html=True)
 
-# Streamlit app content
-st.title("Background")
-st.write("This is a test to check if the background image loads correctly.")
+# Add some test content
+st.title("Test Background Image")
+st.write("If you can see the image in the background, it's working!")
+
 
