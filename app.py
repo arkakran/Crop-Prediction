@@ -92,7 +92,7 @@ from geopy.exc import GeocoderTimedOut
 import json
 
 # OpenWeatherMap API configuration
-OPENWEATHER_API_KEY = "YOUR_API_KEY_HERE"  # Replace with your API key
+OPENWEATHER_API_KEY = "595f4a463eb3eae9c195010131ec58e5"  # Replace with your API key
 
 def get_location_coordinates(location_name):
     """Get coordinates for a given location name using Nominatim"""
